@@ -405,13 +405,18 @@ code {
 dialog {
   width: min(40rem, calc(100% - 2rem));
   max-height: calc(100% - 2rem);
+  overflow: auto;
   padding: 1rem 1.1rem 1.15rem;
   border: 1px solid var(--line-strong);
   background: var(--paper);
   color: var(--ink);
 }
 
-dialog textarea { min-height: 16rem; }
+dialog textarea {
+  min-height: 12rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 
 dialog::backdrop { background: rgba(48, 38, 22, 0.45); }
 

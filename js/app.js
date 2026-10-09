@@ -218,6 +218,7 @@ function writeEditor(meeting, { resetImport = false, focus = null } = {}) {
   fillCues(meeting);
   byId("draft-btn").disabled = meeting.cues.length === 0;
   byId("clear-transcript").disabled = !(meeting.cues.length || meeting.transcript);
+  if (meeting.isSample && meeting.cues.length) byId("transcript-details").open = true;
   if (resetImport) {
     byId("paste").value = "";
     byId("file").value = "";
@@ -386,12 +387,13 @@ function onImport() {
   meetings[index] = meeting;
   writeEditor(meeting, { resetImport: true });
   const saved = flushSave();
+  byId("transcript-details").open = true;
   const warnings = parsed.warnings.length ? ` ${parsed.warnings.join(" ")}` : "";
   const draftNote = drafted ? " 已填入草稿，請核對。A draft was added — please check it." : " 筆記未有覆蓋。Notes were left as they were.";
   const saveNote = saved.ok ? "" : " 儲存失敗。Could not save.";
   setLive(
     byId("import-status"),
-    `已匯入 ${parsed.cues.length} 段（${formatLabel(parsed.format)}）。Imported ${parsed.cues.length} cues.${draftNote}${warnings}${saveNote}`,
+    `已匯入 ${filename}，${parsed.cues.length} 段（${formatLabel(parsed.format)}）。Imported ${parsed.cues.length} cues from ${filename}.${draftNote}${warnings}${saveNote}`,
     saved.ok ? "ok" : "error",
   );
 }
@@ -516,6 +518,7 @@ async function copyMarkdown() {
     byId("copy-dialog").showModal();
     byId("copy-fallback").focus();
     byId("copy-fallback").select();
+    byId("copy-fallback").scrollTop = 0;
   }
 }
 
