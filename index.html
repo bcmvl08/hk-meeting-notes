@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-HK">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#d8d0c3">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self'; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>會議紀錄 Meeting notes</title>
+  <meta name="description" content="把已向與會者披露的 Zoom 或 Teams 轉錄整理成會議紀錄。內容只存在這個瀏覽器。Meeting notes from disclosed transcripts, stored only in this browser.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/notes.css">
+</head>
+<body>
+  <a class="skip" href="#main">跳至內容</a>
+  <article class="sheet">
+    <header class="mast">
+      <p class="kicker"><span>已披露的轉錄</span> <span lang="en">DISCLOSED TRANSCRIPTS</span></p>
+      <h1>會議紀錄</h1>
+      <p class="subtitle" lang="en">Meeting notes from disclosed transcripts</p>
+      <p class="dek">把已向與會者說明的 Zoom 或 Teams 轉錄，整理成議程、討論、決定和待辦。轉錄只存在這個瀏覽器。</p>
+      <p class="dek" lang="en">Turn a Zoom or Teams transcript into agenda, discussion, decisions, and action items. The transcript stays in this browser.</p>
+    </header>
+    <div class="body">
+      <main id="main">
+      <p class="banner" id="privacy-banner" tabindex="-1">
+        <strong>只限已披露的轉錄 <span lang="en">Disclosed transcripts only</span></strong>
+        只可匯入已向與會者說明正在錄音或轉錄的會議。秘密錄音不要放進來。本站不會錄音，也不會連接 Zoom 或 Teams。
+        <span class="en-block" lang="en">Import a transcript only when participants were told that recording or transcription was on. Do not use this for a secret recording. This site does not record audio and does not connect to Zoom or Teams.</span>
+      </p>
+      <p class="banner calm no-print" id="public-banner">
+        <strong>公開網頁，私人瀏覽器 <span lang="en">Public page, private browser</span></strong>
+        這是公開的 GitHub Pages，任何人都可以打開這個介面。會議內容只存在你這個瀏覽器，除非你自己下載或複製。換電腦、無痕視窗，或清除網站資料之後，就不會再看到。
+        <span class="en-block" lang="en">This is a public GitHub Pages site, so anyone can open the interface. Meeting notes stay in your browser unless you download or copy them. They do not follow you to another computer, a private window, or a browser after you clear site data.</span>
+      </p>
+      <div class="banner" id="storage-banner" hidden>
+        <p id="storage-message"></p>
+        <button type="button" id="storage-reset" class="danger" hidden>清除讀不出的資料並放回示範 Reset unreadable data and restore the sample</button>
+      </div>
+      <p class="banner" id="boot-error" hidden>如果這段文字一直在，代表程式沒有載入。請開啟 JavaScript，並用 GitHub Pages 或本機 http 伺服器打開，不要直接雙擊檔案。<span class="en-block" lang="en">If this message stays, the script did not load. Enable JavaScript and open the site over GitHub Pages or a local http server, not by double-clicking the file.</span></p>
+      <noscript>
+        <p class="banner">需要 JavaScript 才能把紀錄存在這個瀏覽器。<span class="en-block" lang="en">JavaScript is required to store notes in this browser.</span></p>
+      </noscript>
+
+        <section id="list-view">
+          <h2>會議 <span class="en-title" lang="en">Meetings</span></h2>
+          <p id="list-message" class="hint"></p>
+          <div class="toolbar no-print">
+            <button type="button" id="new-meeting" class="primary">新會議 New meeting</button>
+            <button type="button" id="restore-sample" class="ghost">示範會議 Sample</button>
+          </div>
+          <p id="list-empty" class="empty" hidden>可以新開一份會議，或放回虛構示範。匯入前請先確認與會者已知悉錄音或轉錄已開啟。<span class="en-block" lang="en">Start a meeting, or restore the fictional sample. Before you import, confirm that participants were told recording or transcription was on.</span></p>
+          <div id="meeting-list" class="meeting-list"></div>
+          <div class="danger-zone no-print">
+            <button type="button" id="clear-all" class="danger">清除此瀏覽器全部紀錄 Clear this browser</button>
+          </div>
+        </section>
+
+        <section id="editor-view" hidden>
+          <div class="screen-only">
+            <p class="back no-print"><a href="#/" id="back-link">← 返回列表 <span lang="en">Back to list</span></a></p>
+            <p id="sample-flag" class="badge" hidden>示範 Demo</p>
+            <h2 id="editor-heading">未命名會議</h2>
+            <p id="sample-note" class="hint" hidden>這是虛構示範，用來展示版面。可以刪除。<span class="en-block" lang="en">This is a fictional sample so the page is not empty. You can delete it.</span></p>
+
+            <form id="meta-form" autocomplete="off" novalidate>
+              <div class="field">
+                <label for="title">標題 <span class="en" lang="en">Title</span></label>
+                <input id="title" type="text" maxlength="200" autocomplete="off" placeholder="例如：社區站週會">
+              </div>
+              <div class="field">
+                <label for="when">日期時間 <span class="en" lang="en">Date and time (HKT)</span></label>
+                <input id="when" type="datetime-local" aria-describedby="when-hint">
+                <p class="hint" id="when-hint">請填香港時間，不會跟電腦時區換算。<span class="en-block" lang="en">Enter Hong Kong time. It is not converted from your computer’s zone.</span></p>
+              </div>
+              <div class="field">
+                <label for="platform">平台 <span class="en" lang="en">Platform</span></label>
+                <select id="platform">
+                  <option value="zoom">Zoom</option>
+                  <option value="teams">Teams</option>
+                  <option value="other">其他 Other</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="language">語言 <span class="en" lang="en">Language</span></label>
+                <select id="language">
+                  <option value="zh">中文 Chinese</option>
+                  <option value="en">English</option>
+                  <option value="mixed">中英混合 Mixed</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="attendees">與會者 <span class="en" lang="en">Attendees (optional)</span></label>
+                <input id="attendees" type="text" maxlength="500" autocomplete="off" placeholder="Benny、Ada、Chris">
+              </div>
+            </form>
+
+            <fieldset id="import-panel" class="no-print">
+              <legend>匯入轉錄 <span class="en" lang="en">Import transcript</span></legend>
+              <p class="hint">接受貼上的文字，或 <code>.txt</code>、<code>.vtt</code>、<code>.srt</code>、<code>.json</code>。不會上傳。<span lang="en">Paste text, or choose a .txt, .vtt, .srt, or .json file. Nothing is uploaded.</span></p>
+              <label class="check">
+                <input id="consent" type="checkbox">
+                <span>我確認與會者已知悉錄音或轉錄已開啟。這不是秘密錄音。
+                  <span class="en-block" lang="en">I confirm participants were told that recording or transcription was on. This was not a secret recording.</span>
+                </span>
+              </label>
+              <div class="field">
+                <label for="paste">貼上轉錄 <span class="en" lang="en">Paste</span></label>
+                <textarea id="paste" rows="6" spellcheck="false" placeholder="在這裡貼上 VTT、SRT、純文字或 JSON"></textarea>
+              </div>
+              <div class="import-actions">
+                <label class="file-btn">選擇檔案 Choose file
+                  <input id="file" type="file" accept=".txt,.vtt,.srt,.json,text/plain,text/vtt,application/json">
+                </label>
+                <button type="button" id="import-btn" class="primary" disabled>匯入 Import</button>
+                <button type="button" id="draft-btn" class="ghost" disabled>從轉錄整理草稿 Draft from transcript</button>
+                <button type="button" id="clear-transcript" class="ghost" disabled>清除轉錄 Clear transcript</button>
+              </div>
+              <p id="file-name" class="file-name"></p>
+              <p id="import-status" class="status" role="status" aria-live="polite"></p>
+            </fieldset>
+
+            <details id="transcript-details">
+              <summary id="transcript-summary">轉錄 Transcript</summary>
+              <ol id="cue-list" class="cue-list"></ol>
+            </details>
+
+            <form id="notes-form" autocomplete="off" novalidate>
+              <div class="field">
+                <label for="agenda">議程 <span class="en" lang="en">Agenda</span></label>
+                <textarea id="agenda" rows="5" placeholder="這一節討論什麼"></textarea>
+              </div>
+              <div class="field">
+                <label for="discussion">討論 <span class="en" lang="en">Discussion</span></label>
+                <textarea id="discussion" rows="8" placeholder="重點，不必逐字照錄"></textarea>
+              </div>
+              <div class="field">
+                <label for="decisions">決定 <span class="en" lang="en">Decisions</span></label>
+                <textarea id="decisions" rows="5" placeholder="會議上定了什麼"></textarea>
+              </div>
+              <fieldset class="actions-field">
+                <legend>待辦 <span class="en" lang="en">Action items</span></legend>
+                <p class="hint">每項可寫負責人和截止日期。兩者都可以留空。<span lang="en">Owner and due date are optional.</span></p>
+                <div id="action-list"></div>
+                <button type="button" id="add-action" class="ghost">新增待辦 Add action</button>
+              </fieldset>
+            </form>
+
+            <div class="export-bar no-print">
+              <button type="button" id="download-md" class="primary">下載 Markdown Download</button>
+              <button type="button" id="copy-md" class="ghost">複製 Copy</button>
+              <button type="button" id="print-btn" class="ghost">列印 Print</button>
+              <button type="button" id="delete-meeting" class="danger">刪除 Delete</button>
+            </div>
+            <p class="hint no-print">下載和複製的 Markdown 含筆記，也含轉錄摘錄。<span lang="en">Markdown includes your notes and the transcript excerpt.</span></p>
+            <p id="save-status" class="status no-print" role="status" aria-live="polite"></p>
+          </div>
+          <div id="print-sheet" class="print-only"></div>
+        </section>
+      </main>
+
+      <footer class="colophon">
+        <p>本頁不會錄音，也不會把轉錄上傳。GitHub 上的程式是公開的，會議內容不是。匯出步驟寫在 <a href="https://github.com/bcmvl08/hk-meeting-notes">README</a>。官方頁面：<a href="https://zoom.us/recording">Zoom Recordings</a> · <a href="https://www.microsoft.com/microsoft-teams/">Microsoft Teams</a>。</p>
+        <p lang="en">This page does not record audio and does not upload transcripts. The code on GitHub is public. Your meeting notes are not. Export steps are in the README.</p>
+      </footer>
+    </div>
+  </article>
+
+  <dialog id="copy-dialog" class="no-print">
+    <p>無法直接寫入剪貼簿。請在下面全選複製。</p>
+    <p lang="en">The browser blocked clipboard access. Select the notes below and copy.</p>
+    <textarea id="copy-fallback" readonly></textarea>
+    <button type="button" id="copy-close" class="ghost">關閉 Close</button>
+  </dialog>
+
+  <script src="js/boot-check.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
