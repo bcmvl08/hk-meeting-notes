@@ -1,13 +1,3 @@
-/**
- * Voice consent race against Chromium.
- * puppeteer-core is loaded from the interrogate repro folder.
- * Chrome is /usr/local/bin/google-chrome. Neither is a project dependency.
- *
- * node scripts/repro-voice-gate-race.mjs
- *
- * Exit 0 when a withdrawn gate aborts the recognizer before onstart, user Stop
- * still commits an in-flight final result, and leaving the meeting aborts.
- */
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
@@ -15,12 +5,13 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 const puppeteerRoot =
+  process.env.PUPPETEER_CORE ||
   "/tmp/interrogate-hk-meeting-notes/adv-1/.adv-repro/node_modules/puppeteer-core";
 const require = createRequire(import.meta.url);
 const puppeteer = require(puppeteerRoot);
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const chrome = "/usr/local/bin/google-chrome";
+const chrome = process.env.CHROME_PATH || "/usr/local/bin/google-chrome";
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, "http://127.0.0.1");
