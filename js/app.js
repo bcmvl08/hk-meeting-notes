@@ -1,1 +1,1 @@
-PLACEHOLDER_USE_NODE_READ
+@file:/tmp/app-args-only-content.txt
