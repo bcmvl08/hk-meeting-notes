@@ -180,6 +180,36 @@ test("draft skips negated agreement in Cantonese, Mandarin, and English", () => 
   assert.match(draft.decisions, /決定星期五|Agreed/);
 });
 
+test("a 40k digit run imports within a linear budget", () => {
+  const budgetMs = 200;
+  const digits = timeParse("1".repeat(40_000), "pasted.txt");
+  assert.equal(digits.parsed.format, "text");
+  assert.equal(digits.parsed.cues.length, 1);
+  assert.equal(digits.parsed.cues[0].text.length, 10_000);
+  assert.ok(
+    digits.ms < budgetMs,
+    `40k digits took ${digits.ms.toFixed(1)}ms, budget ${budgetMs}ms`,
+  );
+});
+
+test("a 40k angle-bracket run imports within a linear budget", () => {
+  const budgetMs = 200;
+  const angles = timeParse("<".repeat(40_000), "pasted.txt");
+  assert.equal(angles.parsed.format, "text");
+  assert.equal(angles.parsed.cues.length, 1);
+  assert.equal(angles.parsed.cues[0].text.length, 10_000);
+  assert.ok(
+    angles.ms < budgetMs,
+    `40k angle brackets took ${angles.ms.toFixed(1)}ms, budget ${budgetMs}ms`,
+  );
+});
+
+function timeParse(text, filename) {
+  const start = performance.now();
+  const parsed = parseTranscript(text, filename);
+  return { parsed, ms: performance.now() - start };
+}
+
 test("dictation after a VTT block becomes its own cue", () => {
   const vtt = `WEBVTT
 
