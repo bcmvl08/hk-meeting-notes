@@ -25,8 +25,8 @@
       <main id="main">
       <p class="banner" id="privacy-banner" tabindex="-1">
         <strong>只限已披露的轉錄 <span lang="en">Disclosed transcripts only</span></strong>
-        只可匯入已向與會者說明正在錄音或轉錄的會議。秘密錄音不要放進來。本站不會錄音，也不會連接 Zoom 或 Teams。
-        <span class="en-block" lang="en">Import a transcript only when participants were told that recording or transcription was on. Do not use this for a secret recording. This site does not record audio and does not connect to Zoom or Teams.</span>
+        只可匯入已向與會者說明正在錄音或轉錄的會議。秘密錄音不要放進來。本站不會連接 Zoom 或 Teams，也不會上傳音訊。可選的「語音輸入」使用瀏覽器語音辨識；部分瀏覽器會把語音送到其供應商處理。
+        <span class="en-block" lang="en">Import a transcript only when participants were told that recording or transcription was on. Do not use this for a secret recording. This site does not connect to Zoom or Teams and does not upload audio. Optional voice input uses the browser’s speech recognition; some browsers send audio to their vendor.</span>
       </p>
       <p class="banner calm no-print" id="public-banner">
         <strong>公開網頁，私人瀏覽器 <span lang="en">Public page, private browser</span></strong>
@@ -97,26 +97,34 @@
 
             <fieldset id="import-panel" class="no-print">
               <legend>匯入轉錄 <span class="en" lang="en">Import transcript</span></legend>
-              <p class="hint">接受貼上的文字，或 <code>.txt</code>、<code>.vtt</code>、<code>.srt</code>、<code>.json</code>。不會上傳。<span lang="en">Paste text, or choose a .txt, .vtt, .srt, or .json file. Nothing is uploaded.</span></p>
+              <p class="hint">接受貼上的文字、語音輸入，或 <code>.txt</code>、<code>.vtt</code>、<code>.srt</code>、<code>.json</code>。不會上傳到本站。<span lang="en">Paste text, use voice input, or choose a .txt, .vtt, .srt, or .json file. Nothing is uploaded to this site.</span></p>
               <label class="check">
                 <input id="consent" type="checkbox">
                 <span>我確認與會者已知悉錄音或轉錄已開啟。這不是秘密錄音。
                   <span class="en-block" lang="en">I confirm participants were told that recording or transcription was on. This was not a secret recording.</span>
                 </span>
               </label>
+              <label class="check" id="voice-cloud-label">
+                <input id="voice-cloud" type="checkbox">
+                <span>我明白「語音輸入」會用瀏覽器語音辨識，音訊可能送到瀏覽器供應商（例如 Chrome 的 Google），本站不會保存音訊。
+                  <span class="en-block" lang="en">I understand voice input uses the browser’s speech recognition; audio may go to the browser vendor (for example Google in Chrome). This site does not keep the audio.</span>
+                </span>
+              </label>
               <div class="field">
                 <label for="paste">貼上轉錄 <span class="en" lang="en">Paste</span></label>
-                <textarea id="paste" rows="6" spellcheck="false" placeholder="在這裡貼上 VTT、SRT、純文字或 JSON"></textarea>
+                <textarea id="paste" rows="6" spellcheck="false" placeholder="在這裡貼上 VTT、SRT、純文字或 JSON，或用語音輸入"></textarea>
               </div>
               <div class="import-actions">
                 <label class="file-btn">選擇檔案 Choose file
                   <input id="file" type="file" accept=".txt,.vtt,.srt,.json,text/plain,text/vtt,application/json">
                 </label>
+                <button type="button" id="voice-btn" class="ghost" disabled aria-pressed="false">語音輸入 Voice</button>
                 <button type="button" id="import-btn" class="primary" disabled>匯入 Import</button>
                 <button type="button" id="draft-btn" class="ghost" disabled>從轉錄整理草稿 Draft from transcript</button>
                 <button type="button" id="clear-transcript" class="ghost" disabled>清除轉錄 Clear transcript</button>
               </div>
               <p id="file-name" class="file-name"></p>
+              <p id="voice-status" class="status" role="status" aria-live="polite"></p>
               <p id="import-status" class="status" role="status" aria-live="polite"></p>
             </fieldset>
 
@@ -160,8 +168,8 @@
       </main>
 
       <footer class="colophon">
-        <p>本頁不會錄音，也不會把轉錄上傳。GitHub 上的程式是公開的，會議內容不是。匯出步驟寫在 <a href="https://github.com/bcmvl08/hk-meeting-notes">README</a>。官方頁面：<a href="https://zoom.us/recording">Zoom Recordings</a> · <a href="https://www.microsoft.com/microsoft-teams/">Microsoft Teams</a>。</p>
-        <p lang="en">This page does not record audio and does not upload transcripts. The code on GitHub is public. Your meeting notes are not. Export steps are in the README.</p>
+        <p>本頁不會把轉錄或音訊上傳到本站伺服器。可選語音輸入走瀏覽器自己的語音辨識。GitHub 上的程式是公開的，會議內容不是。匯出步驟寫在 <a href="https://github.com/bcmvl08/hk-meeting-notes">README</a>。官方頁面：<a href="https://zoom.us/recording">Zoom Recordings</a> · <a href="https://www.microsoft.com/microsoft-teams/">Microsoft Teams</a>。</p>
+        <p lang="en">This page does not upload transcripts or audio to a site server. Optional voice input uses the browser’s own speech recognition. The code on GitHub is public. Your meeting notes are not. Export steps are in the README.</p>
       </footer>
     </div>
   </article>
