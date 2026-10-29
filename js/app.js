@@ -1,1 +1,1 @@
-@file:/tmp/app-args-only-content.txt
+LOAD_FROM_DISK
