@@ -25,8 +25,8 @@ export const LANGUAGE_LABELS = {
 const MAX_CHARS = 1_500_000;
 const MAX_CUES = 5000;
 
-const STAMP = "(?:\\d+:)?\\d{1,2}:\\d{2}(?:[.,]\\d{1,3})?";
-const TIME_LINE = new RegExp(`(${STAMP})\\s*-->\\s*(${STAMP})`);
+const STAMP = "(?:\\d{1,2}:)?\\d{1,2}:\\d{2}(?:[.,]\\d{1,3})?";
+const TIME_LINE = new RegExp(`^(${STAMP})\\s*-->\\s*(${STAMP})`);
 const STAMP_EXACT = /^(?:(\d+):)?(\d{1,2}):(\d{2})(?:[.,](\d{1,3}))?$/;
 
 const TEXT_KEYS = ["text", "content", "utterance", "transcript", "body", "message", "statement", "line"];
@@ -463,7 +463,7 @@ function plausibleSpeaker(name) {
 
 function cleanSpeaker(name) {
   return decodeEntities(String(name || ""))
-    .replace(/<[^>]+>/g, "")
+    .replace(/<[^<>]*>/g, "")
     .replace(/\s+/g, " ")
     .replace(/[:：]\s*$/g, "")
     .trim()
@@ -471,7 +471,7 @@ function cleanSpeaker(name) {
 }
 
 function cleanText(value) {
-  return decodeEntities(String(value || "").replace(/<[^>]+>/g, ""))
+  return decodeEntities(String(value || "").replace(/<[^<>]*>/g, ""))
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
@@ -595,7 +595,7 @@ function looksLikeSrt(text) {
 }
 
 function looksLikeVtt(text) {
-  return new RegExp(`${STAMP}\\s*-->\\s*${STAMP}`).test(text);
+  return new RegExp(`^${STAMP}\\s*-->\\s*${STAMP}`, "m").test(text);
 }
 
 function extension(filename) {
