@@ -268,10 +268,12 @@ function parseTimed(text) {
     if (/^WEBVTT\b/i.test(lines[0]) && !lines.some((line) => TIME_LINE.test(line))) continue;
     const timeIdx = lines.findIndex((line) => TIME_LINE.test(line));
     if (timeIdx === -1) {
+      // Trailing dictation / plain lines after a blank (e.g. voice input under a VTT).
       try {
         const plain = parsePlain(block);
         for (const cue of plain.cues) cues.push(cue);
       } catch {
+        /* ignore leftovers that are not readable cues */
       }
       continue;
     }
@@ -460,6 +462,7 @@ function plausibleSpeaker(name) {
   if (STAMP_EXACT.test(value)) return false;
   if (/^\d+$/.test(value)) return false;
   if (value.includes("-->")) return false;
+  // "I'll send … by 3:15" and similar sentence prefixes are not speakers.
   if (value.split(/\s+/).filter(Boolean).length > 2) return false;
   if (/\d/.test(value) && !/^speaker\s*\d+$/i.test(value)) return false;
   if (/^(note|notes|warning|update|alert|important|ps|re|fwd|from|to)$/i.test(value)) return false;
