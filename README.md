@@ -20,6 +20,14 @@ GitHub Pages 上的這個介面是公開的，任何人都可以打開。會議�
 
 The GitHub Pages interface is public. Anyone can open it. Meeting notes stay in the browser you used unless you download Markdown or copy them. They are not on another computer, in a private window, or in a browser after you clear site data for this origin.
 
+注意：`*.github.io` 同一個帳戶下的專案站共用一個來源（origin）。其他你自己放在 `bcmvl08.github.io` 的頁面，理論上可以讀寫這個站的 `localStorage`。不要在同一個帳戶的 Pages 上放不信任的腳本；若要更隔離，可用自訂網域，或只在本機／獨立 origin 開啟。
+
+Note: project sites under the same GitHub user share one `*.github.io` origin. Another page you host on `bcmvl08.github.io` can read or write this site’s `localStorage`. Do not put untrusted scripts on Pages under the same account; for stronger isolation, use a custom domain or open the app only on localhost / a separate origin.
+
+頁面 CSP 含 `require-trusted-types-for 'script'`，擋掉會注入 HTML 的腳本 API；本站只用 `textContent` 寫入 DOM。匯出的 Markdown 會把 `<`、`>`、`&` 轉義，減少在會解析 HTML 的檢視器裡被當成標記。
+
+The page CSP includes `require-trusted-types-for 'script'`, which blocks script APIs that inject HTML; this app only writes the DOM with `textContent`. Exported Markdown escapes `<`, `>`, and `&` so viewers that parse HTML keep transcript text inert.
+
 儲存鍵是 `hk-meeting-notes.v1`。第一次打開會放入一份虛構示範會議，讓頁面不是空白。示範可以刪除。
 
 The storage key is `hk-meeting-notes.v1`. The first visit stores one fictional sample meeting so the page is not blank. You can delete it.
