@@ -25,8 +25,8 @@ export const LANGUAGE_LABELS = {
 const MAX_CHARS = 1_500_000;
 const MAX_CUES = 5000;
 
-const STAMP = "(?:\\d+:)?\\d{1,2}:\\d{2}(?:[.,]\\d{1,3})?";
-const TIME_LINE = new RegExp(`(${STAMP})\\s*-->\\s*(${STAMP})`);
+const STAMP = "(?:\\d{1,2}:)?\\d{1,2}:\\d{2}(?:[.,]\\d{1,3})?";
+const TIME_LINE = new RegExp(`^(${STAMP})\\s*-->\\s*(${STAMP})`);
 const STAMP_EXACT = /^(?:(\d+):)?(\d{1,2}):(\d{2})(?:[.,](\d{1,3}))?$/;
 
 const TEXT_KEYS = ["text", "content", "utterance", "transcript", "body", "message", "statement", "line"];
@@ -57,9 +57,13 @@ const ARRAY_KEYS = [
   "monologues",
 ];
 
-const DECISION_RE = /(決定|決議|拍板|(?<![不未])同意|\bdecision\b|\bagreed\b|we(?:'ll| will) go with|確認採用)/i;
-const ACTION_RE = /(待辦|行動項目|行動項|action item|follow[- ]?up|負責|\bI will\b|\bI'll\b|\bwe will\b|\bTODO\b|to-do|截止)/i;
-const AGENDA_RE = /(議程|\bagenda\b|今天討論|先過)/i;
+const DECISION_RE =
+  /(決定|決議|拍板|就咁定|(?<![不未])同意|\bdecision\b|\bagreed\b|we(?:'ll| will) go with|確認採用|定咗|拍板定)/i;
+const DECISION_NEGATION_RE =
+  /(唔同意|不同意|冇同意|没有同意|沒有同意|\bnot agree|\bdon't agree|\bdo not agree|\bhaven'?t agreed|\bhave not agreed|\bdidn'?t agree|\bdid not agree)/i;
+const ACTION_RE =
+  /(待辦|行動項目|行動項|action item|follow[- ]?up|負責|之後跟進|我嚟搞|我來跟|\bI will\b|\bI'll\b|\bwe will\b|\bTODO\b|to-do|截止)/i;
+const AGENDA_RE = /(議程|\bagenda\b|今天討論|今日討論|先過|开場|開場)/i;
 const DUE_RE = /\b(20\d{2})[-/.](\d{1,2})[-/.](\d{1,2})\b/;
 
 export function newId() {
@@ -122,7 +126,7 @@ export function draftNotes(cues) {
     if (!text) continue;
     const speaker = String(cue?.speaker || "").trim();
     if (AGENDA_RE.test(text)) agenda.push(text);
-    if (DECISION_RE.test(text)) {
+    if (DECISION_RE.test(text) && !DECISION_NEGATION_RE.test(text)) {
       decisions.push(speaker ? `${speaker}：${text}` : text);
     }
     if (ACTION_RE.test(text)) actions.push(actionFrom(speaker, text));
@@ -255,7 +259,16 @@ function parseTimed(text) {
     if (/^(NOTE|STYLE|REGION)\b/i.test(lines[0])) continue;
     if (/^WEBVTT\b/i.test(lines[0]) && !lines.some((line) => TIME_LINE.test(line))) continue;
     const timeIdx = lines.findIndex((line) => TIME_LINE.test(line));
-    if (timeIdx === -1) continue;
+    if (timeIdx === -1) {
+      // Trailing dictation / plain lines after a blank (e.g. voice input under a VTT).
+      try {
+        const plain = parsePlain(block);
+        for (const cue of plain.cues) cues.push(cue);
+      } catch {
+        /* ignore leftovers that are not readable cues */
+      }
+      continue;
+    }
     const match = lines[timeIdx].match(TIME_LINE);
     const start = normaliseStamp(match[1]);
     const end = normaliseStamp(match[2]);
@@ -436,17 +449,21 @@ function speakerSplit(line) {
 
 function plausibleSpeaker(name) {
   const value = String(name || "").trim();
-  if (!value || value.length > 80) return false;
+  if (!value || value.length > 40) return false;
   if (/^https?$/i.test(value)) return false;
   if (STAMP_EXACT.test(value)) return false;
   if (/^\d+$/.test(value)) return false;
   if (value.includes("-->")) return false;
+  // "I'll send … by 3:15" and similar sentence prefixes are not speakers.
+  if (value.split(/\s+/).filter(Boolean).length > 2) return false;
+  if (/\d/.test(value) && !/^speaker\s*\d+$/i.test(value)) return false;
+  if (/^(note|notes|warning|update|alert|important|ps|re|fwd|from|to)$/i.test(value)) return false;
   return true;
 }
 
 function cleanSpeaker(name) {
   return decodeEntities(String(name || ""))
-    .replace(/<[^>]+>/g, "")
+    .replace(/<[^<>]*>/g, "")
     .replace(/\s+/g, " ")
     .replace(/[:：]\s*$/g, "")
     .trim()
@@ -454,7 +471,7 @@ function cleanSpeaker(name) {
 }
 
 function cleanText(value) {
-  return decodeEntities(String(value || "").replace(/<[^>]+>/g, ""))
+  return decodeEntities(String(value || "").replace(/<[^<>]*>/g, ""))
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
@@ -578,7 +595,7 @@ function looksLikeSrt(text) {
 }
 
 function looksLikeVtt(text) {
-  return new RegExp(`${STAMP}\\s*-->\\s*${STAMP}`).test(text);
+  return new RegExp(`^${STAMP}\\s*-->\\s*${STAMP}`, "m").test(text);
 }
 
 function extension(filename) {

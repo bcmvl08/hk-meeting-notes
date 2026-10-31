@@ -332,6 +332,12 @@ fieldset {
 .status[data-state="ok"] { color: var(--win); }
 .status[data-state="error"] { color: var(--loss); }
 
+button.listening {
+  border-color: var(--copper);
+  background: #f8ecea;
+  color: var(--copper);
+}
+
 .file-name { margin: 0.45rem 0 0; }
 
 details { margin: 0.4rem 0 1rem; }

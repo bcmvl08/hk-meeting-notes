@@ -144,3 +144,85 @@ test("strips a byte order mark and accepts Windows newlines", () => {
   assert.equal(parsed.cues[0].speaker, "Ada");
   assert.equal(parsed.cues[0].text, "你好");
 });
+
+test("does not treat clock times or Note labels as speakers", () => {
+  const timed = parseTranscript(
+    "[22:38:10] I'll send the budget by 3:15\n[22:38:10] we agreed to meet at 10:30\n[22:38:10] Note: we will publish on Friday.\n",
+    "pasted.txt",
+  );
+  assert.equal(timed.cues[0].speaker, "");
+  assert.equal(timed.cues[0].text, "I'll send the budget by 3:15");
+  assert.equal(timed.cues[1].speaker, "");
+  assert.match(timed.cues[1].text, /10:30/);
+  assert.equal(timed.cues[2].speaker, "");
+  assert.match(timed.cues[2].text, /^Note:/);
+
+  const named = parseTranscript("[00:01:02] Benny: 好。", "pasted.txt");
+  assert.equal(named.cues[0].speaker, "Benny");
+  assert.equal(named.cues[0].text, "好。");
+});
+
+test("draft skips negated agreement in Cantonese, Mandarin, and English", () => {
+  const cues = [
+    { speaker: "Ada", text: "我不同意呢個方案" },
+    { speaker: "Ada", text: "我唔同意呢個方案" },
+    { speaker: "Ada", text: "我哋冇同意延期" },
+    { speaker: "Ada", text: "大家都沒有同意" },
+    { speaker: "Ada", text: "We have not agreed on the budget" },
+    { speaker: "Benny", text: "Agreed. 我們決定星期五發佈。" },
+  ];
+  const draft = draftNotes(cues);
+  assert.equal(draft.decisions.includes("唔同意"), false);
+  assert.equal(draft.decisions.includes("冇同意"), false);
+  assert.equal(draft.decisions.includes("沒有同意"), false);
+  assert.equal(draft.decisions.includes("not agreed"), false);
+  assert.equal(draft.decisions.includes("不同意"), false);
+  assert.match(draft.decisions, /決定星期五|Agreed/);
+});
+
+test("a 40k digit run imports within a linear budget", () => {
+  const budgetMs = 200;
+  const digits = timeParse("1".repeat(40_000), "pasted.txt");
+  assert.equal(digits.parsed.format, "text");
+  assert.equal(digits.parsed.cues.length, 1);
+  assert.equal(digits.parsed.cues[0].text.length, 10_000);
+  assert.ok(
+    digits.ms < budgetMs,
+    `40k digits took ${digits.ms.toFixed(1)}ms, budget ${budgetMs}ms`,
+  );
+});
+
+test("a 40k angle-bracket run imports within a linear budget", () => {
+  const budgetMs = 200;
+  const angles = timeParse("<".repeat(40_000), "pasted.txt");
+  assert.equal(angles.parsed.format, "text");
+  assert.equal(angles.parsed.cues.length, 1);
+  assert.equal(angles.parsed.cues[0].text.length, 10_000);
+  assert.ok(
+    angles.ms < budgetMs,
+    `40k angle brackets took ${angles.ms.toFixed(1)}ms, budget ${budgetMs}ms`,
+  );
+});
+
+function timeParse(text, filename) {
+  const start = performance.now();
+  const parsed = parseTranscript(text, filename);
+  return { parsed, ms: performance.now() - start };
+}
+
+test("dictation after a VTT block becomes its own cue", () => {
+  const vtt = `WEBVTT
+
+00:00:35.500 --> 00:00:42.000
+Chris: 我負責行動項目：檢查匯出 Markdown 和列印。截止 2026-10-11。
+
+[22:36:55] Benny: 補充：Chris 負責場地
+`;
+  const parsed = parseTranscript(vtt, "pasted.txt");
+  assert.equal(parsed.format, "vtt");
+  assert.equal(parsed.cues.length, 2);
+  assert.equal(parsed.cues[0].speaker, "Chris");
+  assert.equal(parsed.cues[0].text.includes("補充"), false);
+  assert.equal(parsed.cues[1].speaker, "Benny");
+  assert.match(parsed.cues[1].text, /補充/);
+});

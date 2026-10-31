@@ -8,11 +8,11 @@ A local-first static site. Turn a Zoom or Teams transcript into meeting notes �
 
 只可使用「與會者已知悉正在錄音或轉錄」的會議。Zoom 和 Teams 在錄音或轉錄開啟時都會向會中的人顯示提示。秘密錄音不要放進來。
 
-本站不會在瀏覽器錄音，不會擷取他人畫面或麥克風，也不會連接 Zoom、Teams 或任何付費 API。你要自己從 Zoom 或 Teams 下載或複製轉錄，再貼上或上傳。
+本站不會連接 Zoom、Teams 或任何付費 API，也不會把音訊或轉錄上傳到本站伺服器。你通常從 Zoom 或 Teams 下載或複製轉錄，再貼上或上傳。可選的「語音輸入」用瀏覽器內建語音辨識，把文字寫進貼上欄；部分瀏覽器（例如 Chrome）會把麥克風音訊送到其供應商。使用前要勾選披露確認，以及明白語音可能由瀏覽器供應商處理。
 
 Use a transcript only when people in the meeting were told that recording or transcription was on. Both Zoom and Teams show an on-screen notice when that happens. Do not bring a secret recording here.
 
-This site does not record in the browser, does not capture anyone’s screen or microphone, and does not connect to Zoom, Teams, or any paid API. Download or copy the transcript yourself, then paste or upload it.
+This site does not connect to Zoom, Teams, or any paid API, and it does not upload audio or transcripts to a site server. Usually you download or copy a Zoom or Teams transcript, then paste or upload it. Optional voice input uses the browser’s built-in speech recognition and writes text into the paste box; some browsers (for example Chrome) send microphone audio to their vendor. Before using it, tick the disclosure confirmation and the note that the vendor may process the audio.
 
 ## 公開網頁，私人瀏覽器 Public page, private browser
 
@@ -44,11 +44,15 @@ An empty `.nojekyll` file is in the root so Pages serves the files as they are, 
 
 先在本站按「新會議」，填標題、香港時間、平台、語言。與會者可以留空。日期時間請用香港時間填，頁面不會跟電腦時區換算。
 
-勾選「與會者已知悉錄音或轉錄已開啟」之後，才可以貼上或上傳。接受 `.txt`、`.vtt`、`.srt`、`.json`。`.docx` 不支援；請改下載 WebVTT，或把文字貼上。單檔上限約 2 MB。
+勾選「與會者已知悉錄音或轉錄已開啟」之後，才可以貼上、上傳，或用語音輸入。接受 `.txt`、`.vtt`、`.srt`、`.json`。`.docx` 不支援；請改下載 WebVTT，或把文字貼上。單檔上限約 2 MB。
+
+語音輸入（支援的瀏覽器，例如 Chromium）：再勾選「明白瀏覽器語音辨識可能把音訊送到供應商」，按「語音輸入」，對著麥克風說。最終句子會以 `[時:分:秒]` 寫進貼上欄；若「與會者」欄有名字，會用第一個名字當說話者。停止後按「匯入」。語言跟隨會議的「語言」欄（中文／混合 → `zh-HK`，English → `en-HK`）。不支援的瀏覽器會隱藏語音按鈕。
 
 Create a meeting and fill in the title, Hong Kong time, platform, and language. Attendees are optional. Enter the clock time in Hong Kong time; the page does not convert it from your computer’s zone.
 
-The import button stays off until you tick the confirmation that participants were told recording or transcription was on. Paste text or upload `.txt`, `.vtt`, `.srt`, or `.json`. `.docx` is not supported; download WebVTT or paste the text. One file, about 2 MB at most.
+The import button stays off until you tick the confirmation that participants were told recording or transcription was on. Paste text, use voice input, or upload `.txt`, `.vtt`, `.srt`, or `.json`. `.docx` is not supported; download WebVTT or paste the text. One file, about 2 MB at most.
+
+Voice input (supported browsers such as Chromium): also tick that you understand browser speech recognition may send audio to its vendor, press **Voice**, and speak. Final phrases land in the paste box as `[HH:MM:SS]` lines; if Attendees has names, the first name is used as the speaker. Stop, then press **Import**. Language follows the meeting Language field (Chinese / mixed → `zh-HK`, English → `en-HK`). Unsupported browsers hide the voice button.
 
 匯入之後可以改議程、討論、決定，以及待辦的負責人與截止日期。「從轉錄整理草稿」會用簡單規則抽出像決定、待辦的句子，不是人工智能摘要，請自己核對。筆記會自動寫進這個瀏覽器。
 
@@ -144,6 +148,8 @@ node --test tests/*.test.js
 
 ## 不做的事 Out of scope
 
-- 不錄音、不錄影、不擷取他人的會議。No recording, no screen capture, and no capture of other people’s meetings.
+- 不錄影、不擷取他人的會議畫面，也不代開 Zoom／Teams 雲端錄音。No video capture, no capture of other people’s meeting screens, and no Zoom/Teams cloud recording on your behalf.
+- 可選語音輸入只把辨識文字寫進貼上欄；本站不保存麥克風音訊檔。Optional voice input only writes recognised text into the paste box; this site does not keep microphone audio files.
 - 不代你登入 Zoom 或 Teams，也不保存權杖。No Zoom or Teams sign-in, and no tokens.
 - 沒有雲端同步。要留底，請下載 Markdown。No cloud sync. Download Markdown if you want a copy.
+- 不是裝置端 Whisper 模型；長會議請仍用 Zoom／Teams 下載的轉錄。Not an on-device Whisper model; for long meetings, keep using Zoom/Teams transcript downloads.

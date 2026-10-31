@@ -10,6 +10,13 @@ import {
   toMarkdown,
 } from "./parse.js";
 import { SAMPLE_ID, createSampleMeeting } from "./sample.js";
+import {
+  appendDictationLine,
+  bestTranscriptFromEvent,
+  formatDictationLine,
+  getSpeechRecognitionCtor,
+  speechLocale,
+} from "./speech.js";
 import { blankMeeting, loadState, saveMeetings } from "./store.js";
 
 const MAX_FILE_BYTES = 2 * 1024 * 1024;
@@ -24,6 +31,9 @@ let saveTimer = 0;
 let pickedFile = null;
 let pendingFocus = null;
 let fileToken = 0;
+let recognition = null;
+let voiceListening = false;
+let voiceSupported = false;
 
 window.__NOTES_BOOTED = true;
 
@@ -63,7 +73,11 @@ function bind() {
     field.addEventListener("change", onEdit);
   }
   byId("title").addEventListener("input", syncHeading);
-  byId("consent").addEventListener("change", refreshImportButton);
+  byId("consent").addEventListener("change", onVoiceGateChange);
+  byId("voice-cloud").addEventListener("change", onVoiceGateChange);
+  byId("language").addEventListener("change", () => {
+    if (voiceListening) restartVoiceForLanguage();
+  });
   byId("paste").addEventListener("input", () => {
     if (hydrating) return;
     fileToken += 1;
@@ -73,9 +87,11 @@ function bind() {
     refreshImportButton();
   });
   byId("file").addEventListener("change", onFile);
+  byId("voice-btn").addEventListener("click", onVoiceToggle);
   byId("import-btn").addEventListener("click", onImport);
   byId("draft-btn").addEventListener("click", onDraft);
   byId("clear-transcript").addEventListener("click", onClearTranscript);
+  setupVoiceSupport();
   byId("add-action").addEventListener("click", () => {
     addActionRow({ id: newId(), task: "", owner: "", due: "" }, { focus: true });
     scheduleSave();
@@ -114,6 +130,7 @@ function render() {
 }
 
 function showList() {
+  stopVoice({ silent: true, mode: "abort" });
   document.body.dataset.view = "list";
   byId("editor-view").hidden = true;
   byId("list-view").hidden = false;
@@ -131,6 +148,7 @@ function showList() {
 }
 
 function showMissing() {
+  stopVoice({ silent: true, mode: "abort" });
   document.body.dataset.view = "list";
   byId("editor-view").hidden = true;
   byId("list-view").hidden = false;
@@ -220,12 +238,16 @@ function writeEditor(meeting, { resetImport = false, focus = null } = {}) {
   byId("clear-transcript").disabled = !(meeting.cues.length || meeting.transcript);
   if (meeting.isSample && meeting.cues.length) byId("transcript-details").open = true;
   if (resetImport) {
+    stopVoice({ silent: true, mode: "abort" });
     byId("paste").value = "";
     byId("file").value = "";
     byId("file-name").textContent = "";
     byId("consent").checked = false;
+    byId("voice-cloud").checked = false;
     pickedFile = null;
     setLive(byId("import-status"), "", "");
+    if (voiceSupported) setLive(byId("voice-status"), "", "");
+    else restoreUnsupportedVoiceMessage();
   }
   hydrating = false;
   refreshImportButton();
@@ -315,6 +337,224 @@ function syncHeading() {
 function refreshImportButton() {
   const ready = byId("consent").checked && (byId("paste").value.trim().length > 0 || pickedFile);
   byId("import-btn").disabled = !ready;
+  refreshVoiceButton();
+}
+
+function voiceGatesOpen() {
+  return byId("consent").checked && byId("voice-cloud").checked;
+}
+
+function onVoiceGateChange() {
+  if (recognition && !voiceGatesOpen()) stopVoice({ mode: "abort" });
+  refreshImportButton();
+}
+
+function unsupportedVoiceMessage() {
+  return "此瀏覽器不支援語音輸入。請貼上或上傳轉錄檔。Voice input is not supported here — paste or upload a transcript.";
+}
+
+function restoreUnsupportedVoiceMessage() {
+  setLive(byId("voice-status"), unsupportedVoiceMessage(), "");
+}
+
+function setupVoiceSupport() {
+  const Ctor = getSpeechRecognitionCtor();
+  voiceSupported = Boolean(Ctor);
+  const label = byId("voice-cloud-label");
+  const btn = byId("voice-btn");
+  if (!voiceSupported) {
+    label.hidden = true;
+    btn.hidden = true;
+    restoreUnsupportedVoiceMessage();
+    return;
+  }
+  label.hidden = false;
+  btn.hidden = false;
+  refreshVoiceButton();
+}
+
+function refreshVoiceButton() {
+  const btn = byId("voice-btn");
+  if (!voiceSupported) {
+    btn.disabled = true;
+    btn.setAttribute("aria-pressed", "false");
+    btn.classList.remove("listening");
+    btn.textContent = "語音輸入 Voice";
+    return;
+  }
+  const canStart = byId("consent").checked && byId("voice-cloud").checked;
+  btn.disabled = voiceListening ? false : !canStart;
+  btn.setAttribute("aria-pressed", voiceListening ? "true" : "false");
+  btn.classList.toggle("listening", voiceListening);
+  btn.textContent = voiceListening ? "停止語音 Stop voice" : "語音輸入 Voice";
+}
+
+function onVoiceToggle() {
+  if (!voiceSupported) return;
+  if (voiceListening) {
+    stopVoice({ mode: "stop" });
+    return;
+  }
+  if (!byId("consent").checked) {
+    setLive(
+      byId("voice-status"),
+      "請先確認與會者已知悉錄音或轉錄已開啟。Confirm that participants were told recording or transcription was on.",
+      "error",
+    );
+    return;
+  }
+  if (!byId("voice-cloud").checked) {
+    setLive(
+      byId("voice-status"),
+      "請先確認你明白瀏覽器語音辨識可能把音訊送到供應商。Confirm you understand browser speech recognition may send audio to its vendor.",
+      "error",
+    );
+    return;
+  }
+  startVoice();
+}
+
+function commitDictationText(text) {
+  const body = String(text || "").trim();
+  if (!body) return;
+  const speaker = firstAttendeeName(byId("attendees").value);
+  const line = formatDictationLine(body, { speaker, at: new Date() });
+  byId("paste").value = appendDictationLine(byId("paste").value, line);
+  // Keep a chosen Zoom/Teams file selected; Import still prefers the file.
+  refreshImportButton();
+}
+
+function startVoice() {
+  const Ctor = getSpeechRecognitionCtor();
+  if (!Ctor || !voiceGatesOpen()) return;
+  const sessionMeetingId = currentId;
+  stopVoice({ silent: true });
+  const session = new Ctor();
+  recognition = session;
+  session.continuous = true;
+  session.interimResults = true;
+  session.lang = speechLocale(byId("language").value);
+  session.onstart = () => {
+    if (recognition !== session) return;
+    if (!voiceGatesOpen()) {
+      stopVoice({ mode: "abort" });
+      return;
+    }
+    voiceListening = true;
+    refreshVoiceButton();
+    setLive(
+      byId("voice-status"),
+      `正在聽（${session.lang}）…說完後按「停止語音」，再按匯入。Listening (${session.lang})… press Stop, then Import.`,
+      "ok",
+    );
+  };
+  session.onresult = (event) => {
+    if (currentId !== sessionMeetingId) return;
+    const { finalText, interimText } = bestTranscriptFromEvent(event);
+    if (finalText) {
+      commitDictationText(finalText);
+      setLive(
+        byId("voice-status"),
+        pickedFile
+          ? "已寫入貼上欄（仍保留已選檔案）。Added to paste; chosen file kept."
+          : "已寫入貼上欄。可繼續說，或按停止後匯入。Added to paste. Keep talking, or stop and import.",
+        "ok",
+      );
+    }
+    if (interimText) {
+      setLive(byId("voice-status"), `辨識中… ${interimText}`, "ok");
+    }
+  };
+  session.onerror = (event) => {
+    const code = event?.error || "error";
+    if (code === "aborted") return;
+    if (recognition === session) {
+      recognition = null;
+      voiceListening = false;
+      refreshVoiceButton();
+    }
+    const hint =
+      code === "not-allowed"
+        ? "瀏覽器拒絕麥克風。請允許本頁使用麥克風後再試。Microphone permission denied."
+        : code === "no-speech"
+          ? "沒有聽到語音，可再按語音輸入。No speech heard — try again."
+          : `語音輸入失敗（${code}）。Voice input failed (${code}).`;
+    setLive(byId("voice-status"), hint, "error");
+  };
+  session.onend = () => {
+    if (recognition === session) {
+      recognition = null;
+      voiceListening = false;
+      refreshVoiceButton();
+      if (byId("paste").value.trim()) {
+        setLive(byId("voice-status"), "語音已停止。檢查貼上欄後按匯入。Voice stopped. Check paste, then Import.", "ok");
+      }
+    }
+  };
+  try {
+    session.start();
+  } catch {
+    if (recognition === session) recognition = null;
+    voiceListening = false;
+    refreshVoiceButton();
+    setLive(byId("voice-status"), "無法開始語音輸入。Could not start voice input.", "error");
+  }
+}
+
+function stopVoice({ silent = false, mode = "stop" } = {}) {
+  const session = recognition;
+  recognition = null;
+  voiceListening = false;
+  refreshVoiceButton();
+  if (!session) {
+    if (!silent && voiceSupported) setLive(byId("voice-status"), "", "");
+    return;
+  }
+  if (mode === "abort") {
+    session.onresult = null;
+    session.onerror = null;
+    session.onend = null;
+    try {
+      session.abort();
+    } catch {}
+    if (!silent) setLive(byId("voice-status"), "語音已停止。Voice stopped.", "ok");
+    return;
+  }
+  try {
+    session.onerror = null;
+    const previousEnd = session.onend;
+    session.onend = () => {
+      session.onresult = null;
+      session.onend = null;
+      if (typeof previousEnd === "function") previousEnd();
+      if (!silent) setLive(byId("voice-status"), "語音已停止。Voice stopped.", "ok");
+    };
+    session.stop();
+  } catch {
+    session.onresult = null;
+    session.onend = null;
+    try {
+      session.abort();
+    } catch {}
+    if (!silent) setLive(byId("voice-status"), "語音已停止。Voice stopped.", "ok");
+  }
+}
+
+function restartVoiceForLanguage() {
+  if (!voiceListening) return;
+  if (!voiceGatesOpen()) {
+    stopVoice({ mode: "abort" });
+    return;
+  }
+  startVoice();
+}
+
+function firstAttendeeName(value) {
+  const first = String(value || "")
+    .split(/[,，、;/|]+/)
+    .map((part) => part.trim())
+    .find(Boolean);
+  return first || "";
 }
 
 async function onFile() {
